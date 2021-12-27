@@ -1,0 +1,454 @@
+参考资料：
+    https://blog.csdn.net/zuozewei/article/details/120297793
+    https://blog.csdn.net/weixin_40046357/article/details/120620433
+    https://blog.csdn.net/weixin_29079671/article/details/112098890
+
+单词学习：
+    gauge [ɡeɪdʒ]：测量;判定，判断
+    histogram [ˈhɪstəɡræm] ：（统计学的）直方图，矩形图
+    Observe [əbˈzɜːrv] ：看到;注意到;观察到;观察;注视;监视;说话;评论
+    quantiles：分位数;分位点
+
+1、prometheus简介
+    Prometheus 程序库 提供了一个用 Golang 写成的健壮的插桩库，可以用来注册，收集和暴露服务的指标。在讲述如何在应用程序中暴露指标前，让我们先来探究一下 Prometheus
+库提供的各种指标类型。
+
+2、prometheus指标
+    Prometheus 客户端公开了在暴露服务指标时能够运用的四种指标类型
+
+2.1、Counter（计数器）
+    counter是一个累计的指标，代表一个单调递增的计数器，它的值只会增加或在重启时重置为零。例如，你可以使用 counter 来代表服务过的请求数，完成的任务数，或者错误的次数。
+
+2.2、Gauge（计量器）
+    gauge是代表一个数值类型的指标，它的值可以增或减。gauge通常用于一些度量的值，例如温度或是当前内存使用，也可以用于一些可以增减的“计数”，如正在运行的Goroutine个数。
+
+2.3、Histogram（分布图）
+    histogram 对观测值（类似请求延迟或回复包大小）进行采样，并用一些可配置的桶来计数。它也会给出一个所有观测值的总和。
+
+2.4、Summary（摘要）
+    跟 histogram 类似，summary 也对观测值（类似请求延迟或回复包大小）进行采样。同时它会给出一个总数以及所有观测值的总和，它在一个滑动的时间窗口上计算可配置的分位数。
+
+3、集成
+    package main
+
+    import (
+    	"fmt"
+    	"github.com/prometheus/client_golang/prometheus"
+    	"github.com/prometheus/client_golang/prometheus/promauto"
+    	"github.com/prometheus/client_golang/prometheus/promhttp"
+    	"net/http"
+    	"time"
+    )
+
+    func main() {
+    	http.Handle("/metrics", promhttp.Handler())
+    	http.ListenAndServe(":8080", nil)
+    }
+    运行该代码会启动一个http服务，我们访问下metrics路径(http://localhost:8080/metrics)，看看有什么效果：
+        # HELP go_gc_duration_seconds A summary of the pause duration of garbage collection cycles.
+        # TYPE go_gc_duration_seconds summary
+        go_gc_duration_seconds{quantile="0"} 2.3419e-05
+        go_gc_duration_seconds{quantile="0.25"} 6.5845e-05
+        go_gc_duration_seconds{quantile="0.5"} 0.000152567
+        go_gc_duration_seconds{quantile="0.75"} 0.000261787
+        go_gc_duration_seconds{quantile="1"} 0.000323088
+        go_gc_duration_seconds_sum 0.000939891
+        go_gc_duration_seconds_count 6
+        # HELP go_goroutines Number of goroutines that currently exist.
+        # TYPE go_goroutines gauge
+        go_goroutines 7
+        # HELP go_info Information about the Go environment.
+        # TYPE go_info gauge
+        go_info{version="go1.16.7"} 1
+        # HELP go_memstats_alloc_bytes Number of bytes allocated and still in use.
+        # TYPE go_memstats_alloc_bytes gauge
+        go_memstats_alloc_bytes 2.134336e+06
+        # HELP go_memstats_alloc_bytes_total Total number of bytes allocated, even if freed.
+        # TYPE go_memstats_alloc_bytes_total counter
+        go_memstats_alloc_bytes_total 7.806712e+06
+        # HELP go_memstats_buck_hash_sys_bytes Number of bytes used by the profiling bucket hash table.
+        # TYPE go_memstats_buck_hash_sys_bytes gauge
+        go_memstats_buck_hash_sys_bytes 1.444857e+06
+        # HELP go_memstats_frees_total Total number of frees.
+        # TYPE go_memstats_frees_total counter
+        go_memstats_frees_total 11598
+        # HELP go_memstats_gc_cpu_fraction The fraction of this program's available CPU time used by the GC since the program started.
+        # TYPE go_memstats_gc_cpu_fraction gauge
+        go_memstats_gc_cpu_fraction 1.8912080622021e-06
+        # HELP go_memstats_gc_sys_bytes Number of bytes used for garbage collection system metadata.
+        # TYPE go_memstats_gc_sys_bytes gauge
+        go_memstats_gc_sys_bytes 4.732616e+06
+        # HELP go_memstats_heap_alloc_bytes Number of heap bytes allocated and still in use.
+        # TYPE go_memstats_heap_alloc_bytes gauge
+        go_memstats_heap_alloc_bytes 2.134336e+06
+        # HELP go_memstats_heap_idle_bytes Number of heap bytes waiting to be used.
+        # TYPE go_memstats_heap_idle_bytes gauge
+        go_memstats_heap_idle_bytes 6.3750144e+07
+        # HELP go_memstats_heap_inuse_bytes Number of heap bytes that are in use.
+        # TYPE go_memstats_heap_inuse_bytes gauge
+        go_memstats_heap_inuse_bytes 2.932736e+06
+        # HELP go_memstats_heap_objects Number of allocated objects.
+        # TYPE go_memstats_heap_objects gauge
+        go_memstats_heap_objects 2411
+        # HELP go_memstats_heap_released_bytes Number of heap bytes released to OS.
+        # TYPE go_memstats_heap_released_bytes gauge
+        go_memstats_heap_released_bytes 6.3750144e+07
+        # HELP go_memstats_heap_sys_bytes Number of heap bytes obtained from system.
+        # TYPE go_memstats_heap_sys_bytes gauge
+        go_memstats_heap_sys_bytes 6.668288e+07
+        # HELP go_memstats_last_gc_time_seconds Number of seconds since 1970 of last garbage collection.
+        # TYPE go_memstats_last_gc_time_seconds gauge
+        go_memstats_last_gc_time_seconds 1.6404068147781818e+09
+        # HELP go_memstats_lookups_total Total number of pointer lookups.
+        # TYPE go_memstats_lookups_total counter
+        go_memstats_lookups_total 0
+        # HELP go_memstats_mallocs_total Total number of mallocs.
+    我们并没有在代码中添加什么业务逻辑，但是可以看到依然有一些指标数据输出，这是因为 Go 客户端库默认在我们暴露的全局默认指标注册表中注册了一些关于 promhttp 处理器
+和运行时间相关的默认指标，根据不同指标名称的前缀可以看出
+go_*：以 go_ 为前缀的指标是关于 Go 运行时相关的指标，比如垃圾回收时间、goroutine 数量等，这些都是 Go 客户端库特有的，其他语言的客户端库可能会暴露各自语言的其他运行时指标。
+promhttp_*：来自 promhttp 工具包的相关指标，用于跟踪对指标请求的处理。
+    这些默认的指标是非常有用，但是更多的时候我们需要自己控制，来暴露一些自定义指标。这就需要我们去实现自定义的指标了。
+
+4、添加自定义指标
+    接下来我们来自定义一个的 gauge 指标来暴露当前的温度。内容如下所示：
+        func main() {
+        	// 创建一个没有任何label标签的gauge指标
+        	temp := prometheus.NewGauge(
+        		prometheus.GaugeOpts{
+        			Name: "home_temperature_celsius",
+        			Help: "the temp of now",
+        		})
+
+        	// 在默认的注册表中注册该指标
+        	prometheus.MustRegister(temp)
+
+        	// 设置gauge的值
+        	go func() {
+            		temp.Set(39)
+            		for {
+            			temp.Inc()
+            			time.Sleep(time.Second)
+            		}
+            	}()
+
+        	http.Handle("/metrics", promhttp.Handler())
+        	http.ListenAndServe(":8080", nil)
+        }
+    第一次访问：
+        # HELP home_temperature_celsius the temp of now
+        # TYPE home_temperature_celsius gauge
+        home_temperature_celsius  39
+    第二次访问：
+        # HELP home_temperature_celsius the temp of now
+        # TYPE home_temperature_celsius gauge
+        home_temperature_celsius  44
+    第三次访问：
+        # HELP home_temperature_celsius the temp of now
+        # TYPE home_temperature_celsius gauge
+        home_temperature_celsius  56
+
+上面文件中和最初的文件就有一些变化了：
+我们使用 prometheus.NewGauge() 函数创建了一个自定义的 gauge 指标对象，指标名称为 home_temperature_celsius，并添加了一个注释信息。
+然后使用 prometheus.MustRegister() 函数在默认的注册表中注册了这个 gauge 指标对象。
+通过调用 Set() 方法将 gauge 指标的值设置为 39。
+然后像之前一样通过 HTTP 暴露默认的注册表。
+    需要注意的是除了 prometheus.MustRegister() 函数之外还有一个 prometheus.Register() 函数，一般在 golang 中我们会将 Mustxxx 开头的函数定义为必须满足
+条件的函数，如果不满足会返回一个 panic 而不是一个 error 操作，所以如果这里不能正常注册的话会抛出一个 panic。
+
+5、自定义注册表
+    前面我们是使用 prometheus.MustRegister() 函数来将指标注册到全局默认注册中，此外我们还可以使用 prometheus.NewRegistry() 函数来创建和使用自己的非全局
+的注册表。既然有全局的默认注册表，为什么我们还需要自定义注册表呢？这主要是因为：
+    1）全局变量通常不利于维护和测试，创建一个非全局的注册表，并明确地将其传递给程序中需要注册指标的地方，这也一种更加推荐的做法。
+    2）全局默认注册表包括一组默认的指标，我们有时候可能希望除了自定义的指标之外，不希望暴露其他的指标。
+    下面的示例程序演示了如何创建、使用和暴露一个非全局注册表对象，内容如下所示：
+        func main() {
+        	// 创建一个自定义注册表
+        	registry := prometheus.NewRegistry()
+        	// 条件process和go运行时指标到我们自定义的registry中
+        	registry.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+        	registry.MustRegister(prometheus.NewGoCollector())
+        	// 创建一个简单的guage指标
+        	temp := prometheus.NewGauge(
+        		prometheus.GaugeOpts{
+        			Name: "home_temperature_celsius_1",
+        			Help: "the temp of now",
+        		})
+        	// 使用自定义的注册表注册
+        	registry.MustRegister(temp)
+
+        	// 设置gauge的值
+        	go func() {
+        		temp.Set(39)
+        		for {
+        			temp.Inc()
+        			time.Sleep(time.Second)
+        		}
+        	}()
+        	// 暴露自定义指标
+        	http.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{Registry: registry}))
+        	http.ListenAndServe(":8080", nil)
+        }
+    查看运行效果：
+        # HELP go_memstats_stack_sys_bytes Number of bytes obtained from system for stack allocator.
+        # TYPE go_memstats_stack_sys_bytes gauge
+        go_memstats_stack_sys_bytes 425984
+        # HELP go_memstats_sys_bytes Number of bytes obtained from system.
+        # TYPE go_memstats_sys_bytes gauge
+        go_memstats_sys_bytes 7.3352456e+07
+        # HELP go_threads Number of OS threads created.
+        # TYPE go_threads gauge
+        go_threads 8
+        # HELP home_temperature_celsius_1 the temp of now
+        # TYPE home_temperature_celsius_1 gauge
+        home_temperature_celsius_1 48
+    好像没什么乱用
+
+上面我们没有使用全局默认的注册表了，而是创建的一个自定义的注册表：
+首先使用 prometheus.NewRegistry() 函数创建我们自己的注册表对象。
+然后使用自定义注册表对象上面的 MustRegister() 哈是来注册 guage 指标，而不是调用 prometheus.MustRegister() 函数（这会使用全局默认的注册表）。
+如果我们希望在自定义注册表中也有进程和 Go 运行时相关的指标，我们可以通过实例化 Collector 收集器来添加他们。
+最后在暴露指标的时候必须通过调用 promhttp.HandleFor() 函数来创建一个专门针对我们自定义注册表的 HTTP 处理器，为了同时暴露前面示例中的 promhttp_* 相关的指标，我们还需要在 promhttp.HandlerOpts 配置对象的 Registry 字段中传递我们的注册表对象。
+
+6、Gauges
+    前面的示例我们已经了解了如何添加 gauge 类型的指标，创建了一个没有任何标签的指标，直接使用 prometheus.NewGauge() 函数即可实例化一个 gauge 类型的指标对象，
+通过 prometheus.GaugeOpts 对象可以指定指标的名称和注释信息：
+        prometheus.NewGauge(
+        		prometheus.GaugeOpts{
+        			Name: "home_temperature_celsius_1",
+        			Help: "the temp of now",
+        		})
+    我们知道 gauge 类型的指标值是可以上升或下降的，所以我们可以为 gauge 指标设置一个指定的值，所以 gauge 指标对象暴露了 Set()、Inc()、Dec()、Add() 和 Sub() 这些函数来更改指标值：
+
+        go func() {
+        		temp.Set(39)    // 初始化值
+        		temp.Inc()      // 增加1
+        		temp.Dec()      // 减少1
+        		temp.Add(10)    // 增加10
+        		temp.Sub(42)    // 减少42
+        	}()
+    我们看下运行结果：
+        # HELP home_temperature_celsius_1 the temp of now
+        # TYPE home_temperature_celsius_1 gauge
+        home_temperature_celsius_1 7
+
+7、Counters
+    要创建一个 counter 类型的指标和 gauge 比较类似，只是用 prometheus.NewCounter() 函数来初始化指标对象：
+        func main() {
+        	// 创建一个简单的counter指标
+        	temp := prometheus.NewCounter(
+        		prometheus.CounterOpts{
+        			Name: "temp",
+        			Help: "the temp of now",
+        		})
+
+        	// 注册counter
+        	prometheus.Register(temp)
+
+        	// 设置counter的值
+        	go func() {
+        		for {
+        			temp.Inc()
+        			time.Sleep(time.Second)
+        		}
+
+        	}()
+        	// 暴露自定义指标
+        	http.Handle("/metrics", promhttp.Handler())
+        	http.ListenAndServe(":8080", nil)
+        }
+        访问结果：
+            # HELP temp the temp of now
+            # TYPE temp counter
+            temp 830
+    我们知道 counter 指标只能随着时间的推移而不断增加，所以我们不能为其设置一个指定的值或者减少指标值，所以该对象下面只有 Inc() 和 Add() 两个函数：
+        		temp.Inc()		// +1
+        		temp.Add(10)	// +10
+    当服务进程重新启动的时候，counter 指标值会被重置为 0，不过不用担心数据错乱，我们一般会使用的 rate() 函数会自动处理。
+
+8、Histograms
+    创建直方图指标比 counter 和 gauge 都要复杂，因为需要配置把观测值归入的 bucket 的数量，以及每个 bucket 的上边界。Prometheus 中的直方图是累积的，所以每
+一个后续的 bucket 都包含前一个 bucket 的观察计数，所有 bucket 的下限都从 0 开始的，所以我们不需要明确配置每个 bucket 的下限，只需要配置上限即可。同样要创建
+直方图指标对象，我们使用 prometheus.NewHistogram() 函数来进行初始化：
+        // 创建一个简单的histogram指标
+        	requestDuration := prometheus.NewHistogram(
+        		prometheus.HistogramOpts{
+        			Name: "http_request_duration_seconds",
+        			Help: "the histogram of http request durations in seconds",
+        			// bucket配置，第一个bucket包括所有在1s内完成的所有请求，第二个包括所在的2s内完成的请求，最后一个包括3s内完成的所有请求
+                    Buckets: []float64{1, 2, 3},
+        		})
+    这里和前面不一样的地方在于除了指定指标名称和帮助信息之外，还需要配置 Buckets。如果我们手动去枚举所有的 bucket 可能很繁琐，所以 Go 客户端库为为我们提供了一些
+辅助函数可以帮助我们生成线性或者指数增长的 bucket，比如 prometheus.LinearBuckets() 和 prometheus.ExponentialBuckets() 函数。
+    直方图会自动对数值的分布进行分类和计数，所以它只有一个 Observe() 方法，每当你在代码中处理要跟踪的数据时，就会调用这个方法。例如，如果你刚刚处理了一个 HTTP
+请求，花了 0.42 秒，则可以使用下面的代码来跟踪。
+        // 设置值
+        	go func() {
+        		time.Sleep(time.Second)
+        		requestDuration.Observe(1)
+
+        	}()
+    由于跟踪持续时间是直方图的一个常见用例，Go 客户端库就提供了辅助函数，用于对代码的某些部分进行计时，然后自动观察所产生的持续时间，将其转化为直方图，如下代码所示：
+        // 设置值
+        	go func() {
+        		timer := prometheus.NewTimer(requestDuration)
+        		time.Sleep(time.Second)
+        		timer.ObserveDuration()
+
+        	}()
+
+    histogram程序案例：
+        func init() {
+        	rand.Seed(time.Millisecond.Nanoseconds())
+        }
+        func main() {
+        	// 创建一个简单的histogram指标
+        	requestDuration := prometheus.NewHistogram(
+        		prometheus.HistogramOpts{
+        			Name: "http_request_duration_seconds",
+        			Help: "the histogram of http request durations in seconds",
+        			// bucket配置，第一个bucket包括所有在1s内完成的所有请求，第二个包括所在的2s内完成的请求，最后一个包括3s内完成的所有请求
+        			Buckets: []float64{1, 2, 3},
+        		})
+
+        	// 注册
+        	prometheus.Register(requestDuration)
+
+        	// 设置值
+        	go func() {
+        		for {
+        			du, err := time.ParseDuration(fmt.Sprintf("%ss", strconv.Itoa(rand.Intn(3))))
+        			if err != nil {
+        				fmt.Println("parse duration is bad, err is", err)
+        				continue
+        			}
+        			fmt.Println("parse duration is ok, num is", du)
+
+        			timer := prometheus.NewTimer(requestDuration)
+        			time.Sleep(du)
+        			timer.ObserveDuration()
+        		}
+
+
+        	}()
+        	// 暴露自定义指标
+        	http.Handle("/metrics", promhttp.Handler())
+        	http.ListenAndServe(":8080", nil)
+        }
+
+   访问metrics：
+        # HELP http_request_duration_seconds the histogram of http request durations in seconds
+        # TYPE http_request_duration_seconds histogram
+        http_request_duration_seconds_bucket{le="1"} 36
+        http_request_duration_seconds_bucket{le="2"} 71
+        http_request_duration_seconds_bucket{le="3"} 106
+        http_request_duration_seconds_bucket{le="+Inf"} 106
+        http_request_duration_seconds_sum 105.18489877499995
+        http_request_duration_seconds_count 106
+    每个配置的存储桶最终作为一个带有 _bucket 后缀的计数器时间序列，使用 le（小于或等于） 标签指示该存储桶的上限，具有上限的隐式存储桶 +Inf 也暴露于比最大配置的
+存储桶边界花费更长的时间的请求，还包括使用后缀 _sum 累积总和和计数 _count 的指标，这些时间序列中的每一个在概念上都是一个 counter 计数器（只能上升的单个值），只是它们是作为直方图的一部分创建的。
+
+9、Summaries
+    创建和使用摘要与直方图非常类似，只是我们需要指定要跟踪的 quantiles 分位数值，而不需要处理 bucket 桶，比如我们想要跟踪 HTTP 请求延迟的第 50、90 和 99 个
+百分位数，那么我们可以创建这样的一个摘要对象：
+        // 创建一个简单的histogram指标
+        	requestDuration := prometheus.NewSummary(
+        		prometheus.SummaryOpts{
+        			Name: "http_request_duration_seconds",
+        			Help: "the summary of http request durations in seconds",
+        			Objectives: map[float64]float64{
+        				0.5:0.05,	// 第50个百分位，最大绝对误差为0.05
+        				0.9:0.01,	// 第90个百分位，最大绝对误差为0.01
+        				0.99:0.001,	// 第99个百分位，最大绝对误差为0.001
+        			},
+        		})
+    这里和前面不一样的地方在于使用 prometheus.NewSummary() 函数初始化摘要指标对象的时候，需要通过 prometheus.SummaryOpts{} 对象的 Objectives 属性指定想
+要跟踪的分位数值。同样摘要指标对象创建后，跟踪持续时间的方式和直方图是完全一样的，使用一个 Observe() 函数即可：
+        // 设置值
+        go func() {
+            time.Sleep(time.Second)
+            requestDuration.Observe(1)
+        }()
+    虽然直方图桶可以跨维度汇总（如端点、HTTP 方法等），但这对于汇总 quantiles 分位数值来说在统计学上是无效的。例如，你不能对两个单独的服务实例的第 90 百分位延迟
+进行平均，并期望得到一个有效的整体第 90 百分位延迟。如果需要按维度进行汇总，那么我们需要使用直方图而不是摘要指标。
+    摘要指标最终生成的指标数据与直方图非常类似，不同之处在于使用 quantile 标签来表示分位数序列，并且这些序列没有扩展指标名称的后缀：
+        # HELP http_request_duration_seconds the summary of http request durations in seconds
+        # TYPE http_request_duration_seconds summary
+        http_request_duration_seconds{quantile="0.5"} 1.004944136
+        http_request_duration_seconds{quantile="0.9"} 4.00419549
+        http_request_duration_seconds{quantile="0.99"} 4.005150092
+        http_request_duration_seconds_sum 85.11106429199998
+        http_request_duration_seconds_count 48
+
+10、标签
+    到目前为止，我们还没有为指标对象添加任何的标签，要创建具有标签维度的指标，我们可以调用类似于 NewXXXVec() 的构造函数来初始化指标对象：
+        NewGauge() 变成 NewGaugeVec()
+        NewCounter() 变成 NewCounterVec()
+        NewSummary() 变成 NewSummaryVec()
+        NewHistogram() 变成 NewHistogramVec()
+这些函数允许我们指定一个额外的字符串切片参数，提供标签名称的列表，通过它来拆分指标。 例如，为了按照房子以及测量温度的房间来划分我们早期的温度表指标，可以这样创建指标
+    // 创建一个简单的指标
+    	temp := prometheus.NewGaugeVec(
+    		prometheus.GaugeOpts{
+    			Name: "house_temp",
+    			Help: "the temp of house",
+    		},
+    		// 设置两个标签名称
+    		[]string{"house", "room"},
+    		)
+    然后要访问一个特有标签的子指标，需要在设置其值之前，用 house 和 room 标签的各自数值，对产生的 gauge 向量调用 WithLabelValues() 方法来处理下：
+        // 设置值
+        	go func() {
+        		for {
+        			temp.WithLabelValues("hongfuyuan", "live-room").Set(27)
+        			/*
+        			如果你喜欢在选择的子指标中明确提供标签名称，可以使用效率稍低的 With() 方法来代替：
+        				temp.With(prometheus.Labels{"house":"hongfuyuan", "room":"live-room"}).Set(27)
+        			 */
+
+        		}
+        	}()
+    不过需要注意如果向这两个方法传递不正确的标签数量或不正确的标签名称，这两个方法都会触发 panic。下面是我们按照 house 和 room 标签维度区分指标的完整示例，内容如下所示：
+        func main() {
+        	// 创建一个简单的指标
+        	temp := prometheus.NewGaugeVec(
+        		prometheus.GaugeOpts{
+        			Name: "house_temp",
+        			Help: "the temp of house",
+        		},
+        		// 设置两个标签名称
+        		[]string{"house", "room"},
+        		)
+
+        	// 注册
+        	prometheus.Register(temp)
+
+        	// 设置值
+        	go func() {
+        		temp.WithLabelValues("home", "liyuntang-room").Set(27)
+        		temp.WithLabelValues("home", "zhaoxingxing-room").Set(20)
+        		temp.WithLabelValues("linyi-home", "master-room").Set(10)
+        		for {
+        			temp.WithLabelValues("home", "liyuntang-room").Inc()
+        			temp.WithLabelValues("home", "zhaoxingxing-room").Inc()
+        			temp.WithLabelValues("linyi-home", "master-room").Add(2)
+        			time.Sleep(time.Second)
+        		}
+        	}()
+        	// 暴露自定义指标
+        	http.Handle("/metrics", promhttp.Handler())
+        	http.ListenAndServe(":8080", nil)
+        }
+    运行结果：
+        # HELP house_temp the temp of house
+        # TYPE house_temp gauge
+        house_temp{house="home",room="liyuntang-room"} 37
+        house_temp{house="home",room="zhaoxingxing-room"} 30
+        house_temp{house="linyi-home",room="master-room"} 30
+
+    注意：当使用带有标签维度的指标时，任何标签组合的时间序列只有在该标签组合被访问过至少一次后才会出现在 /metrics 输出中，这对我们在 PromQL 查询的时候会产生一些
+问题，因为它希望某些时间序列一直存在，我们可以在程序第一次启动时，将所有重要的标签组合预先初始化为默认值。
+
+
+
+
+

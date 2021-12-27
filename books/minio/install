@@ -1,0 +1,24 @@
+官网：
+    http://docs.minio.org.cn/docs/
+参考资料：
+    https://cloud.tencent.com/developer/article/1585487
+
+服务端安装：
+    wget http://dl.minio.org.cn/server/minio/release/linux-amd64/minio
+    chmod +x minio
+    ./minio server /mnt/data
+
+客户端安装：
+    wget    http://dl.minio.org.cn/client/mc/release/linux-amd64/mc
+    chmod +x mc
+    ./mc --help
+
+golang版本sdk：
+    go get github.com/minio/minio-go/v7
+
+
+
+
+
+
+

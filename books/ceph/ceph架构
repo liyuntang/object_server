@@ -1,0 +1,32 @@
+
+参考资料：
+    https://www.cnblogs.com/holidays/p/arch.html
+
+
+ceph存储集群包括osd、monitor和client三个组件
+    osd提供单机存储与数据复制
+    monitor负责保存集群元数据，包括osd map(包括osd状态等)，crush map(包括物理层次结构及访问规则)，pg map等，monitor本身也是一个paxos强一致性集群
+    client是请求接入的地方，会去monitor请求osd map,crush map,crush rules，然后根据objid -> pgid -> osd sets
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

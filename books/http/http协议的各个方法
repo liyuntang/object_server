@@ -1,0 +1,295 @@
+参考资料：
+    https://www.cnblogs.com/susanhonly/p/8508596.html
+    https://www.cnblogs.com/jwmdlm/p/12601881.html
+    https://www.jianshu.com/p/c4474364744a
+    https://so.toutiao.com/s/search_wenda_pc/list?enter_from=search_result&qid=6980613075325993502&query=http方法的详细作用和使用场景&enter_answer_id=6980823773461119521&qname=举例说明两种http协议中规定的主要操作方法与作用？
+
+
+    标准Http协议支持6中请求方法，即：GET、HEAD、PUT、DELETE、POST、OPTIONS。但其实我们大部分情况下只用到了GET和POST。如果想设计一个符合RESTful规范的web应用
+程序，则这六种方法都会用到。不过即使暂时不想设计REST，了解这六种方法的本质仍然很有作用的。下面一次说明这六种方法。
+    GET：GET可以说是最常见的了，它本质就是发送一个请求来取得服务器上的某一资源。资源通过一组HTTP头和呈现数据（如HTML文本，或者图片或者视频等）返回给客户端。GET请求
+中，永远不会包含呈现数据。
+    HEAD：HEAD和GET本质是一样的，区别在于HEAD不含有呈现数据，而仅仅是HTTP头信息。有的人可能觉得这个方法没什么用，其实不是这样的。想象一个业务场景：欲判断某个资源
+是否存在，我们通常使用GET，但这里用HEAD则一样更加明确。
+    PUT：这个方法比较少见。HTML表单也不支持这个。本质上来讲，PUT和POST极为相似，都是向服务器发送数据，但它们之间有一个重要区别，PUT通常指定了资源的存放位置，而POST
+则没有，POST的数据存放位置由服务器自己决定。举个例子：如一个用于提交博文的URL，/addBlog。如果用PUT，则提交的URL会是像这样的“/addBlog/abc123”，其中abc123就是
+这个博文的地址。而如果用POST，则这个地址会在提交后由服务器告知客户端。目前大部分博客都是这样的。显然，PUT和POST用途是不一样的。具体用哪个还取决于当前的业务场景。
+    DELETE：删除某一个资源。基本上这个也很少见，不过还是有一些地方比如amazon的S3云服务里面就用的这个方法来删除资源。
+    POST：向服务器提交数据。这个方法用途广泛，几乎目前所有的提交操作都是靠这个完成。
+    OPTIONS：这个方法很有趣，但极少使用。它用于获取当前URL所支持的方法。若请求成功，则它会在HTTP头部包含一个名为“Allow”的头，值是所支持的方法，如“GET，POST”。
+
+    其实还有一个TRACE方法，不过这个基本上不会用到。以上的六种方法，我们可以跟数据库的CRUD增删改查操作对应起来：CREATE：PUT、READ：GET、UPDATE：POST、DELETE：DELETE
+这样一来就实现了HTTP和数据库操作（其实不光是数据库，任何数据如文件图表都是这样）的完美统一，这也是REST的精髓之一。
+    GET：通过请求URL得到资源
+    POST：用于添加新的内容
+    OPTIONS：询问可以执行哪些方法
+    TRACE：用于远程诊断服务器
+    HEAD：类似于GET，但是不返回body信息，用于检测对象是否存在，以及得到对象的元数据
+    HEAD，GET，OPTIONS和TRACE视为安全的方法，因为它们只是从服务器获得资源而不对服务器做任何修改，但是HEAD，GET，OPTIONS在用户端不安全。而POST则影响服务器上的
+资源。
+
+
+    常见的HTTP请求方式主要有9种：
+        HTTP1.0：GET、POST、HEAD
+        HTTP1.1新增:   PUT、PATCH、DELETE、OPTIONS、TRACE、CONNECT
+1、GET
+    GET是HTTP协议中常用的请求方式，比如百度搜索“get”：
+get  https://www.baidu.com/s?wd=get&rsv_spt=1&rsv_iqid=0xd554a74c00029959&issp=1&f=8&rsv_bp=1&rsv_idx=2&ie=utf-8&tn=baiduhome_pg&rsv_enter=1&rsv_dl=ib&rsv_sug3=4&rsv_sug1=3&rsv_sug7=100
+会在URL后面明文携带信息，常用于获取资源，不会改变资源的状态，具有幂等性。
+
+2、POST
+    POST通过请求体（RequestBody）传递参数。POST先会将报文头发送给服务器，然后服务器返回100 continue后，再发送请求体，实际上发生了两次TCP连接，不具备幂等性。
+
+3、HEAD
+    类似于 GET 请求，只不过返回的响应中没有具体的内容，用于获取报头。
+
+4、PUT
+    从客户端向服务器传送的数据取代指定的文档的内容。
+
+5、PATCH
+    是对 PUT 方法的补充，用来对已知资源进行局部更新 。
+
+6、DELETE
+    请求服务器删除指定的页面。
+
+7、OPTIONS
+    客户端查看服务器性能
+
+8、TRACE
+    回显服务器收到的请求，主要用于测试或诊断
+
+9、CONNECT
+    HTTP/1.1 协议中预留给能够将连接改为管道方式的代理服务器。
+
+1xx信息：
+    100 Continue：服务器仅接收到部分请求，但是如果服务器并没有拒绝该请求，客户端应该继续发送其余的请求。
+    101 Switching Protocols	：服务器转换协议，服务器将遵从客户的请求转换到另外一种协议。
+
+2xx：成功
+    200 OK：请求成功
+    201 Created：请求被创建完成，同时新的资源被创建。
+    202 Accepted：供处理的请求已被接受，但是处理未完成。
+    203 Non-authoritative ：文档已经正常地返回，但一些应答头可能不正确，因为使用的是文档的拷贝。
+    204 No Content：没有新文档。浏览器应该继续显示原来的文档。如果用户定期地刷新页面，而Servlet可以确定用户文档足够新，这个状态代码是很有用的。
+    205 Reset Content：没有新文档。但浏览器应该重置它所显示的内容。用来强制浏览器清除表单输入内容。
+    206 Partial Content：客户发送了一个带有Range头的GET请求，服务器完成了它。
+
+
+3xx：重定向
+    300 Multiple Choices：多重选择。链接列表。用户可以选择某链接到达目的地。最多允许五个地址。
+    301 Moved Permanently：所请求的页面已经转移至新的url。
+    302 Found：所请求的页面已经临时转移至新的url。
+    303 See Other：所请求的页面可在别的url下被找到。
+    304 Not Modified：未按预期修改文档。客户端有缓冲的文档并发出了一个条件性的请求（一般是提供If-Modified-Since头表示客户只想比指定日期更新的文档）。服务器告诉客户，原来缓冲的文档还可以继续使用。
+    305 Use Proxy：客户请求的文档应该通过Location头所指明的代理服务器提取。
+    306 Unused：此代码被用于前一版本。目前已不再使用，但是代码依然被保留。
+    307 Temporary Redirect：被请求的页面已经临时移至新的url。
+
+4xx：客户端错误
+    400 Bad Request：服务器未能理解请求。
+    401 Unauthorized：被请求的页面需要用户名和密码。
+    402 Payment Required：此代码尚无法使用。
+    403 Forbidden：禁止访问。
+    404 Not Found：服务器无法找到被请求的页面。
+    405 Method Not Allowed：请求中指定的方法不被允许。
+    406 Not Acceptable：服务器生成的响应无法被客户端所接受。
+    407 Proxy Authentication Required：用户必须首先使用代理服务器进行验证，这样请求才会被处理。
+    408 Request Timeout：请求超出了服务器的等待时间。
+    409 Conflict：由于冲突，请求无法被完成。
+    410 Gone：被请求的页面不可用。
+    411 Length Required："Content-Length" 未被定义。如果无此内容，服务器不会接受请求。
+    412 Precondition Failed：请求中的前提条件被服务器评估为失败。
+    413 Request Entity Too Large：由于所请求的实体的太大，服务器不会接受请求。
+    414 Request-url Too Long：由于url太长，服务器不会接受请求。当post请求被转换为带有很长的查询信息的get请求时，就会发生这种情况。
+    415 Unsupported Media Type：由于媒介类型不被支持，服务器不会接受请求。
+    416 Requested Range Not Satisfiable：服务器不能满足客户在请求中指定的Range头。
+    417 Expectation Failed：执行失败。
+    423：锁定的错误。
+
+5xx：服务器端错误
+    500 Internal Server Error：请求未完成。服务器遇到不可预知的情况。
+    501 Not Implemented：请求未完成。服务器不支持所请求的功能。
+    502 Bad Gateway：请求未完成。服务器从上游服务器收到一个无效的响应。
+    503 Service Unavailable：请求未完成。服务器临时过载或宕机。
+    504 Gateway Timeout：网关超时。
+    505 HTTP Version Not Supported：服务器不支持请求中指明的HTTP协议版本。
+
+
+
+1、GET
+    GET请求是向服务端请求获取某个或某些资源（resource），比如查询数据库单个或list数据，服务端成功的话，一般状态码返回200。
+
+2、POST
+    POST请求是用来向服务端请求新增资源（resource），处理成功的话，服务端一般返回状态码201。
+
+3、PUT
+    PUT请求一般是用来向服务端请求修改某个已存在的资源（resource）,服务端一般返回状态码200，204等。
+
+4、DELETE
+    DELETE请求一般是用来向服务端请求删除某个已存在的资源（resource），服务端一般返回200，202等。
+
+5、PATCH
+    PATCH请求一般是对某个资源做局部修改,如个别字段。
+
+6、PUT和PATCH区别：
+    PUT和PATCH都是用来修改服务端某个资源的，但是PUT和PATCH修改时提交的数据是不同的，PUT是将整个资源的信息都提交到服务端，包括修改的，未修改的都提交到服务端，而
+PATCH只提交已修改的字段到服务端。而服务端对PUT请求应该是整体替换，PATCH请求只修改提交的字段。所以PUT请求应该是幂等的，即多次提交同一个请求，结果是相同的。
+
+7、OPTIONS
+    OPTIONS请求一般是客户端向服务端判断对某个资源是否有访问权限。
+
+8、HEAD
+    HEAD请求一般是用来获取某个资源的metadata信息，比如说某份报告的关键描述信息等。
+
+9、TRACE
+    回显服务器收到的请求，主要用于测试或诊断萊垍頭條
+
+
+1、GET 方法
+    GET 是最常用的 HTTP 请求方法，会显示请求指定的资源，并返回响应主体，一般对它的期望是安全且幂等的。
+    所谓安全是指该操作用于获取信息而非修改信息。换句话说，GET 请求一般不应产生副作用。就是说，它仅仅是获取资源信息，就像数据库查询一样，不会修改和增加数据，不会影响
+资源的状态。
+    这里安全的含义仅仅是指是非修改信息。
+    幂等的概念简单点来说，就是指对同一个 URL 的多个请求应该返回同样的结果。
+    查询字符串（名称/值对）是在 GET 请求的 URL 中发送的，在 URL 后加 ? 连接查询字符串，多条查询字符串通过 & 来连接，比如：
+        https://cn.bing.com/search?q=%E7%BC%96%E7%A8%8B%E4%B8%89%E6%98%A7&PC=U316&FORM=CHROMN
+1.1、GET 请求的一些其他特性：
+    GET 请求可被缓存
+    GET 请求保留在浏览器历史记录中
+    GET 请求可被收藏为书签
+    GET 请求不应在处理敏感数据时使用
+    GET 请求有长度限制
+    GET 请求只应当用于取回数据（不修改）
+
+2、HEAD 方法
+    与 GET 方法一样，都是向服务器发出指定资源的请求，只不过服务器将不传回资源的本文部分，只返回头部消息。它的好处在于，使用这个方法可以在不必传输全部内容的情况下，就
+可以获取其中“关于该资源的信息”（元信息或称元数据），对资源的首部进行检查，比如：如果 GET /users 返回用户列表，那么 HEAD /users 将发出相同的请求，但不会返回用户列表。
+
+2.1、HEAD 方法的使用场景
+    在不获取资源的情况下，了解资源的一些信息，比如资源类型；
+    通过查看响应中的状态码，可以确定资源是否存在；
+    通过查看首部，测试资源是否被修改。
+
+3、POST 方法
+    POST 方法用于向指定资源提交数据，请求服务器进行处理（例如提交表单或者上传文件），数据被包含在请求本文中。POST 请求可能会创建新的资源或修改现有资源，或二者皆有。
+每次提交，表单的数据被浏览器用编码到HTTP请求的body里。浏览器发出的POST请求的body的主要格式
+    1）application/x-www-form-urlencoded 用来传输简单的数据，如 "key1=value1&key2=value2" 这样的格式。
+    2）multipart/form-data 主要用来传输文件内容。
+    3）application/json 告诉服务端消息主体是序列化后的 JSON 字符串。
+    4）text/plain 纯文本格式
+
+    采用 multipart/form-data 是因为 application/x-www-form-urlencoded 的编码方式对于文件这种二进制的数据非常低效。除了原生的content-type，开发人员也可以
+完全自定义数据提交格式！
+
+3.1、POST 请求的其他特性：
+    POST 请求不会被缓存
+    POST 请求不会保留在浏览器历史记录中
+    POST 不能被收藏为书签
+    POST 请求对数据长度没有要求
+
+4、PUT 方法
+    PUT 方法用于将数据发送到服务器来创建/更新资源。
+    PUT 与 POST 方法的区别在于，PUT 方法是幂等的：调用一次与连续调用多次是等价的（即没有副作用），而连续调用多次 POST 方法可能会有副作用，比如将一个订单重复提交多次。
+
+4.1、PUT 方法可能的响应
+    如果目标资源不存在，并且PUT方法成功创建了一份，那么源头服务器必须返回 201(Created) 来通知客户端资源已创建。
+    如果目标资源已经存在，并且依照请求中封装的表现形式成功进行了更新，那么，源头服务器必须返回 200 (OK) 或者 204 (No Content) 来表示请求的成功完成。
+
+5、DELETE 方法
+    DELETE 方法就是请求服务器删除指定 URL 所对应的资源。但是，客户端无法保证删除操作一定会被执行，因为 HTTP 规范允许服务器在不通知客户端的情况下撤销请求。
+    如果 DELETE 方法成功执行，那么可能会有以下几种状态码：
+        状态码 202 (Accepted) 表示请求的操作可能会成功执行，但是尚未开始执行。
+        状态码 204 (No Content) 表示操作已执行，但是无进一步的相关信息。
+        状态码 200 (OK) 表示操作已执行，并且响应中提供了相关状态的描述信息。
+
+6、TRACE 方法
+    TRACE 方法实现沿通向目标资源的路径的消息“回环”（loop-back）测试 ，提供了一种实用的 debug 机制。请求的最终接收者应当原样反射（reflect）它接收到的消息，作为
+一个 Content-Type 为 message/http 的200（OK）响应的消息的主体（body）返回给客户端 。
+    最终接收者是指初始（origin）服务器，或者第一个接收到 Max-Forwards 值为 0的请求的服务器。我们都知道，客户端在发起一个请求时，这个请求可能要穿过防火墙、代理、
+网关、或者其它的一些应用程序。这中间的每个节点都可能会修改原始的 HTTP 请求。由于有一个“回环”诊断，在请求最终到达服务器时，服务器会弹回一条 TRACE 响应，并在响应主体
+中携带它收到的原始请求报文的最终模样。这样客户端就可以查看 HTTP 请求报文在发送的途中，是否被修改过了。
+
+7、PATCH 方法
+    在HTTP协议中，请求方法 PATCH 用于对资源进行部分修改。在HTTP协议中， PUT 方法已经被用来表示对资源进行整体覆盖， 而 POST 方法则没有对标准的补丁格式的提供支持。
+不同于 PUT 方法，而与 POST 方法类似，PATCH 方法是非幂等的，这就意味着连续多个的相同请求会产生不同的效果。要判断一台服务器是否支持 PATCH 方法，那么就看它是否将其
+添加到了响应首部 Allow 或者 Access-Control-Allow-Methods （在跨域访问的场合，CORS）的方法列表中 。另外一个支持 PATCH 方法的隐含迹象是 Accept-Patch 首部的
+出现，这个首部明确了服务器端可以接受的补丁文件的格式。
+    204 状态码表示这是一个操作成功的响应，因为响应中不带有消息主体。
+
+8、OPTIONS 方法
+    OPTIONS 方法用于获取目的资源所支持的通信选项。客户端可以对特定的 URL 使用 OPTIONS 方法，也可以对整站（通过将 URL 设置为“*”）使用该方法。若请求成功，则它会在
+HTTP 头中包含一个名为 “Allow” 的头，值是所支持的方法，如 “GET, POST”。
+
+8.1、使用示例
+    可以使用 OPTIONS 方法对服务器发起请求，以检测服务器支持哪些 HTTP 方法，响应报文包含一个 Allow 首部字段，该字段的值表明了服务器支持的所有 HTTP 方法：
+        HTTP/1.1 200 OK
+        Allow: OPTIONS, GET, HEAD, POST
+        Cache-Control: max-age=604800
+        Date: Thu, 13 Oct 2016 11:45:00 GMT
+        Expires: Thu, 20 Oct 2016 11:45:00 GMT
+        Server: EOS (lax004/2813)
+        x-ec-custom-error: 1
+        Content-Length: 0
+
+9、CONNECT 方法
+    CONNECT 方法可以开启一个客户端与所请求资源之间的双向沟通的通道。它可以用来创建隧道（tunnel）。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

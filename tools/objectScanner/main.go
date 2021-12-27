@@ -1,0 +1,8 @@
+package objectScanner
+
+func main() {
+
+
+
+
+}

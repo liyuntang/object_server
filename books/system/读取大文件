@@ -1,0 +1,202 @@
+参考资料：
+    https://www.php.cn/be/go/467869.html
+    https://studygolang.com/articles/31841
+    https://www.jianshu.com/p/509bb77ec103
+
+1、测试环境
+    liyuntang-2:Desktop liyuntang$ ls -lh /Users/liyuntang/Desktop
+    total 28002536
+    -rw-r--r--@ 1 liyuntang  staff   1.4G Dec 20 17:19 aaa.MOV      <-------- 视频文件
+    -rw-r--r--  1 liyuntang  staff    12G Dec 23 11:35 aaa.file     <-------- 文本文件
+    -rw-r--r--  1 liyuntang  staff   7.2M Dec 23 11:34 tmp.file     <-------- 文本文件，临时测试文件
+
+
+2、Golang超大文件读取的两个方案
+    1）流处理方式
+    2）分片处理
+    比如我们有一个log文件，运行了几年，数据量非常之大。按照我们之前的操作可能代码会这样写（aaa.MOV为例）：
+        func Custom(name, object string) {
+                        object = "/Users/liyuntang/Desktop/aaa.MOV"
+                    	aTime := time.Now()
+                    	file, err := os.Open(object)
+                    	if err != nil {
+                    		logger.Println("open file is bad, err is", err)
+                    		return
+                    	}
+                    	defer file.Close()
+
+                    	buf, err := io.ReadAll(file)
+                    	if err != nil {
+                    		logger.Println("read data is bad, err is", err)
+                    		return
+                    	}
+                    	logger.Println("read data is ok, size is", len(buf), "run time is", time.Since(aTime))
+                    }
+    上面的代码读取几兆的文件可以，但是如果大于你本身及其内存，那就直接翻车了。因为上面的代码，是把文件所有的内容全部都读取到内存之后返回，几兆的文件，你内存够大可以处理，
+但是一旦上几百兆的文件，就没那么好处理了。那么，正确的方法有两种，第一个是使用流处理方式代码如下：
+    func Custom(name, object string) {
+    	object = "/Users/liyuntang/Desktop/tmp.file"
+    	aTime := time.Now()
+    	file, err := os.Open(object)
+    	if err != nil {
+    		logger.Println("open file is bad, err is", err)
+    		return
+    	}
+    	defer file.Close()
+    	f := bufio.NewReader(file)
+    	for {
+    		_, _, err := f.ReadLine()
+    		if err != nil {
+    			if err != io.EOF {
+    				logger.Println("read line is bad, err is", err)
+    				return
+    			}
+    			logger.Println("read data is over, runtime is", time.Since(aTime))
+    			return
+    		}
+    	}
+
+    }
+    第二个方案就是分片处理，当读取的是二进制文件，没有换行符的时候，使用下面的方案一样处理大文件
+    func Custom(name, object string) {
+    	object = "/Users/liyuntang/Desktop/aaa.MOV"
+    	aTime := time.Now()
+    	file, err := os.Open(object)
+    	if err != nil {
+    		logger.Println("open file is bad, err is", err)
+    		return
+    	}
+    	defer file.Close()
+
+    	// 10M
+    	m := 0
+    	for {
+    		buf := make([]byte, 1024*1024*10)
+    		n, err := file.Read(buf)
+    		if err != nil {
+    			if err == io.EOF {
+    				logger.Println("read over........run time is", time.Since(aTime))
+    				return
+    			}
+    			logger.Println("read data is bad, err is", err)
+    			break
+    		}
+    		m += n
+    		logger.Println("已经读取", m, "字节数据")
+    	}
+    }
+    执行结果：
+        [client ]2021/12/23 13:35:44 custom.go:38: read over........run time is 847.742485ms
+
+
+
+    当今世界的任何计算机系统每天都会生成大量的日志或数据。随着系统的增长，将调试数据存储到数据库中是不可行的，因为它们是不可变的，而且只用于分析和故障解决目的。因此，
+组织倾向于将其存储在文件中，这些文件驻留在本地磁盘存储中。我们将使用Golang从16 GB的.txt或.log文件中提取数百万行日志。Lets Code…! 开始编码...!让我们先打开文件。
+我们将使用标准的Go os.File用于任何文件IO。
+    func Custom(name, object string) {
+    	object = "/Users/liyuntang/Desktop/aaa.file"
+    	file, err := os.Open(object)
+    	if err != nil {
+    		logger.Println("open file is bad, err is", err)
+    		return
+    	}
+    	defer file.Close()
+
+    }
+
+一旦文件被打开，我们有以下两个选项继续进行
+    1）逐行读取文件，这有助于减少对内存的压力，但将花费更多的时间在IO。
+    2）一次将整个文件读入内存并处理该文件，这会消耗更多内存，但会显著增加时间。
+当文件太大时，比如16GB，我们无法将整个文件加载到内存中。但是第一个选项对我们来说也是不可行的，因为我们希望在几秒钟内处理文件。但你猜怎么着，还有第三种选择。瞧…!在将
+整个文件加载到内存时，我们将使用bufio.NewReader()块加载文件，在Go中可用。
+    	for {
+    		buf := make([]byte, 1024*1024*10)
+    		n, err := file.Read(buf)
+    		if err != nil {
+    			if err == io.EOF {
+    				logger.Println("read over........")
+    				return
+    			}
+    			logger.Println("read data is bad, err is", err)
+    			break
+    		}
+    	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+两种方式处理速度对比：
+    文件名称    文件大小    无缓冲耗时        有缓冲耗时
+    aaa.file    12G         打不开         25.476541392s
+    bbb.file    1.6G     13.82096964s     1.617731118s
+    aaa.MOV     1.4G     8.618987238s     1.644365419s
+
+liyuntang-2:Desktop liyuntang$ ls -lh
+total 31431232
+-rw-r--r--  1 liyuntang  staff   1.6G Dec 23 13:51 bbb.file
+
+
+func Custom(name, object string) {
+	object = "/Users/liyuntang/Desktop/bbb.file"
+	aTime := time.Now()
+	file, err := os.Open(object)
+	if err != nil {
+		logger.Println("open file is bad, err is", err)
+		return
+	}
+	defer file.Close()
+	_, err = io.ReadAll(file)
+	if err != nil {
+		logger.Println("read is bad, err is", err)
+		return
+	}
+	logger.Println("read is ok, run time is", time.Since(aTime))
+
+}
+
+[client ]2021/12/23 13:53:37 custom.go:35: read is ok, run time is 13.82096964s
+
+
+func Custom(name, object string) {
+	object = "/Users/liyuntang/Desktop/bbb.file"
+	aTime := time.Now()
+	file, err := os.Open(object)
+	if err != nil {
+		logger.Println("open file is bad, err is", err)
+		return
+	}
+	defer file.Close()
+	reader := bufio.NewReader(file)
+	for {
+		_, _, err := reader.ReadLine()
+		if err != nil {
+			if err == io.EOF {
+				logger.Println("read is ok, run time is", time.Since(aTime))
+				return
+			}
+			logger.Println("read bad, err is", err)
+			os.Exit(0)
+		}
+	}
+}
+
+[client ]2021/12/23 13:56:35 custom.go:36: read is ok, run time is 1.617731118s
+
+
+
+
+
+
+
+

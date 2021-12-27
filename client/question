@@ -1,0 +1,99 @@
+
+1、oss的架构方案、数据高可用方案
+2、对于小对象的上传下载处理
+3、超大型对象的存储方案、负载均衡，以及是否需要做特殊处理
+4、上线、下线节点后的数据动态平衡、数据维护方案
+5、数据校验功能及处理细节
+6、对于元数据的处理，是采用元数据记录好还是客户端记录对象与节点的映射好，在极限扩容的情况下>应该怎么规划
+7、对象存储当前面临的挑战、解决方案及未来发展趋势
+
+1、大对象在获取token时耗时特别长
+
+代码如下：
+    func post(objectName string, objectDataReader io.Reader, size int64) (server, token string, e error) {
+    	apiServer := heartbeat.ChooseRandomDataServer()
+    	if apiServer == "" {
+    		return "", "", fmt.Errorf("get api server is bad, number of api server is 0")
+    	}
+    	turl := fmt.Sprintf("http://%s/objects/%s", apiServer, objectName)
+    	logger.Println(turl)
+    	// 计算sha256值
+    	hash := sha256.New()
+    	chunckSize := 1024 * 1024 * 5
+    	aaa := 0
+    	for {
+    		buf := make([]byte, chunckSize)
+    		n, err := objectDataReader.Read(buf)
+    		if err != nil {
+    			if err != io.EOF {
+    				return apiServer, "", errors.New(fmt.Sprintf("read data is bad, err is %v", err))
+    			}
+    		}
+    		_, err = hash.Write(buf[:n])
+    		if err != nil {
+    			return apiServer, "", errors.New("sha256 is bad")
+    		}
+    		aaa+=n
+
+    		logger.Println("read data is ok, size is", aaa, "n is", n)
+    		if n == 0 {
+    			break
+    		}
+    	}
+    	logger.Println("start encode.........................")
+    	// base64编码
+    	aTime := time.Now()
+    	secretData := base64.StdEncoding.EncodeToString(hash.Sum(nil))
+    	logger.Println("encode run time is", time.Since(aTime))
+    	bTime := time.Now()
+    	logger.Println("start post request")
+    	req, err := http.NewRequest("POST", turl, objectDataReader)
+    	if err != nil {
+    		logger.Println(err)
+    		return apiServer, "", err
+    	}
+    	// http.head添加配置
+    	req.Header.Set("size", fmt.Sprintf("%d", size))
+    	digest := url.PathEscape(fmt.Sprintf("SHA-256=%s", secretData))
+    	req.Header.Add("Digest", digest)
+    	client := http.Client{}
+    	reps, err := client.Do(req)
+    	if err != nil {
+    		logger.Println(err)
+    		return apiServer, "", err
+    	}
+    	logger.Println("post request run time is", time.Since(bTime))
+    	defer reps.Body.Close()
+    	if reps.StatusCode != 201 {
+    		// 说明post请求报错了
+    		return apiServer, "", errors.New(fmt.Sprintf("http code is not 201, code is %d", reps.StatusCode))
+    	}
+    	return apiServer, reps.Header.Get("location"), nil
+    }
+
+2、改变请求
+    %2FOSpFc0GxkMnwBP%2FOVBimCauc1V2UFUAE4NQotBTpH8=，如果url中带有该字符串，或者head中带有该字符串则会将post请求改为get请求
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
